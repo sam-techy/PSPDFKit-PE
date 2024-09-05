@@ -1,7 +1,7 @@
 I have outline a comprehensive approach to establishing logging, tracing, metrics collection, dashboarding, notifications, and alerting for my Go web application. The goal is to ensure our application is observable, maintainable, and meets the needs of both users and developers
 
 ### **Logging**:
-- **Solution**: I Use **Fluentd** or **Logstash** to aggregate logs from different sources (containers, apps) and centralize them in **Elasticsearch** or **AWS CloudWatch**.
+- **Solution**: I will use **Fluentd** or **Logstash** to aggregate logs from different sources (containers, apps) and centralize them in **Elasticsearch** or **AWS CloudWatch**.
 - **Why**: Logs are essential for debugging and trend analysis, providing insights into application behavior.
 
 ### **Tracing**:
