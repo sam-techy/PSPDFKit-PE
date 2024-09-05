@@ -1,0 +1,86 @@
+name: App Release
+
+on:
+  release:
+    types: [created]
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # This includes releases: write permission
+      packages: write
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.21'
+
+    - name: Test
+      run: go test -v ./...
+
+    - name: Build
+      run: |
+        GOOS=linux GOARCH=amd64 go build -o go-webapp-linux-amd64
+        GOOS=darwin GOARCH=amd64 go build -o go-webapp-darwin-amd64
+        GOOS=windows GOARCH=amd64 go build -o go-webapp-windows-amd64.exe
+
+    - name: Create Release
+      id: create_release
+      if: github.event_name == 'release'
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.event.release.tag_name }}
+        release_name: Release ${{ github.event.release.tag_name }}
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset (Linux)
+      if: github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./go-webapp-linux-amd64
+        asset_name: go-webapp-linux-amd64
+        asset_content_type: application/octet-stream
+
+    - name: Upload Release Assets (Darwin)
+      if: github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./go-webapp-darwin-amd64
+        asset_name: go-webapp-darwin-amd64
+        asset_content_type: application/octet-stream
+
+    - name: Upload Release Assets (Windows)
+      if: github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./go-webapp-windows-amd64.exe
+        asset_name: go-webapp-windows-amd64.exe
+        asset_content_type: application/octet-stream
+
+    - name: Build and Push Docker Image
+      env:
+        DOCKER_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || github.sha }}
+      run: |
+        docker build -t "${{ secrets.DOCKERHUB_USERNAME }}/go-webapp:$DOCKER_TAG" .
+        echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+        docker push "${{ secrets.DOCKERHUB_USERNAME }}/go-webapp:$DOCKER_TAG"
